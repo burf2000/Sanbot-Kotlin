@@ -1,53 +1,26 @@
-
 package com.example.sanbotdemo
 
-import android.content.Context
 import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
-import com.sanbot.opensdk.base.BindBaseInterface
-import com.sanbot.opensdk.beans.OperationResult
-import com.sanbot.opensdk.beans.Order
-import com.sanbot.opensdk.beans.UserInfo
-import com.sanbot.opensdk.function.unit.HardWareManager
-import com.sanbot.opensdk.function.unit.SpeechManager
-import com.sanbot.opensdk.function.unit.WheelMotionManager
-import com.sanbot.opensdk.function.unit.interfaces.hardware.GyroscopeListener
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.sanbotdemo.ui.theme.SanbotKotlinTheme
 
-class MainActivity : AppCompatActivity() {
-
-    private val listener = BindBase(this)
-    private val hardWareManager = HardWareManager(listener)
-    private val speechManager = SpeechManager(listener)
-    private val wheelMotionManager = WheelMotionManager(listener)
-
+class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-
-        hardWareManager.setOnHareWareListener(object : GyroscopeListener {
-            override fun gyroscopeCheckResult(accelerometerStatus: Boolean, compassStatus: Boolean) {
-                TODO("Not yet implemented")
+        enableEdgeToEdge()
+        setContent {
+            SanbotKotlinTheme {
+                SanbotScreen()
             }
-
-            override fun gyroscopeData(
-                driftAngle: Float,
-                elevationAngle: Float,
-                rollAngle: Float
-            ) {
-                TODO("Not yet implemented")
-            }
-        })
+        }
     }
-}
-
-class BindBase(
-    override val context: Context,
-) : BindBaseInterface {
-    override fun sendCommandToMainService(
-        order: Order,
-        userInfo: UserInfo?
-    ): OperationResult? {
-        TODO("Not yet implemented")
-    }
-
 }

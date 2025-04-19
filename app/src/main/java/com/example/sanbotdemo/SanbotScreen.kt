@@ -21,24 +21,25 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.sanbotdemo.ui.theme.SanbotKotlinTheme
+import kotlinx.coroutines.flow.map
 
 @Composable
 fun SanbotScreen(
     viewModel: SanbotViewModel = viewModel(),
 ) {
-    val connected by viewModel.connected.collectAsStateWithLifecycle()
+    val connected by viewModel.connected.collectAsStateWithLifecycle(false)
     SanbotView(
         connected = connected,
-        onClick = {},
+        onClick = { viewModel.speak(it) },
     )
 }
 
 @Composable
 fun SanbotView(
     connected: Boolean,
-    onClick: () -> Unit,
+    onClick: (String) -> Unit,
 ) {
-    var text by remember { mutableStateOf("") }
+    var text by remember { mutableStateOf("boo") }
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         Box(
             contentAlignment = Alignment.Center,
@@ -54,7 +55,10 @@ fun SanbotView(
                     value = text,
                     onValueChange = { text = it },
                 )
-                Button(onClick = onClick) {
+                Button(
+                    onClick = { onClick(text) },
+                    enabled = connected,
+                ) {
                     Text(text = "Speak")
                 }
             }
@@ -77,5 +81,6 @@ class SanbotViewModel(
     application: Application,
 ) : AndroidViewModel(application) {
     private val sanbot: Sanbot = SanbotComponent.create().sanbot
-    val connected = sanbot.connected
+    val connected = sanbot.service.map { it != null }
+    fun speak(text: String) = sanbot.service.value?.speak(text)
 }

@@ -5,31 +5,23 @@ import kotlinx.coroutines.flow.StateFlow
 import me.tatarka.inject.annotations.Inject
 
 interface Sanbot {
-    val connected: StateFlow<Boolean>
+    val service: StateFlow<SanbotServiceInterface?>
 
     fun onConnected(service: SanbotServiceInterface)
     fun onDisconnected()
 }
 
 @Inject
-class SanbotImpl : Sanbot, SanbotServiceInterface {
-    private val _connected = MutableStateFlow(false)
-    override val connected = _connected
-
-    private var service: SanbotServiceInterface? = null
+class SanbotImpl : Sanbot {
+    private val _service = MutableStateFlow<SanbotServiceInterface?>(null)
+    override val service = _service
 
     override fun onConnected(service: SanbotServiceInterface) {
-        this.service = service
-        _connected.value = true
+        _service.value = service
     }
 
     override fun onDisconnected() {
-        this.service = null
-        _connected.value = false
-    }
-
-    override fun speak(text: String) {
-        service?.speak(text)
+        _service.value = null
     }
 
 }

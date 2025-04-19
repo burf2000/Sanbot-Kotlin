@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.google.ksp)
 }
 
 android {
@@ -11,7 +12,9 @@ android {
     defaultConfig {
         applicationId = "com.example.sanbotdemo"
         minSdk = 24
-        targetSdk = 35
+        // The Sanbot SDK registers a listener but doesn't specify if it is exported or not.
+        // this throws a SecurityException in 34+.
+        targetSdk = 33
         versionCode = 1
         versionName = "1.0"
 
@@ -34,6 +37,9 @@ android {
     buildFeatures {
         compose = true
     }
+    ksp {
+        arg("me.tatarka.inject.generateCompanionExtensions", "true")
+    }
 }
 
 dependencies {
@@ -48,6 +54,8 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    ksp(libs.kotlin.inject.ksp)
+    implementation(libs.kotlin.inject.runtime)
 
     // Old libs for Sanbot library.
     implementation(libs.google.material)

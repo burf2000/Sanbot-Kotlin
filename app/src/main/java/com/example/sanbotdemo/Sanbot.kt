@@ -1,27 +1,34 @@
 package com.example.sanbotdemo
 
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import me.tatarka.inject.annotations.Inject
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 
 interface Sanbot {
-    val service: StateFlow<SanbotServiceInterface?>
+    val connected: SharedFlow<Boolean>
+    val toSpeak: SharedFlow<String>
 
-    fun onConnected(service: SanbotServiceInterface)
-    fun onDisconnected()
+    suspend fun onConnected()
+    suspend fun onDisconnected()
+    suspend fun speak(text: String)
 }
 
-@Inject
 class SanbotImpl : Sanbot {
-    private val _service = MutableStateFlow<SanbotServiceInterface?>(null)
-    override val service = _service
+    private val _connected = MutableSharedFlow<Boolean>(replay = 1)
+    override val connected = _connected
 
-    override fun onConnected(service: SanbotServiceInterface) {
-        _service.value = service
+    private val _toSpeak = MutableSharedFlow<String>(1)
+    override val toSpeak = _toSpeak
+
+    override suspend fun onConnected() {
+        _connected.emit(true)
     }
 
-    override fun onDisconnected() {
-        _service.value = null
+    override suspend fun onDisconnected() {
+        _connected.emit(false)
+    }
+
+    override suspend fun speak(text: String) {
+        _toSpeak.emit(text)
     }
 
 }

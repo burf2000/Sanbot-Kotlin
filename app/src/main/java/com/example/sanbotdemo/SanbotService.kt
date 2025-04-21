@@ -3,32 +3,40 @@ package com.example.sanbotdemo
 import com.sanbot.opensdk.base.BindBaseService
 import com.sanbot.opensdk.function.unit.HardWareManager
 import com.sanbot.opensdk.function.unit.SpeechManager
-import com.sanbot.opensdk.function.unit.WheelMotionManager
 import com.sanbot.opensdk.function.unit.interfaces.hardware.GyroscopeListener
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
-interface SanbotServiceInterface {
-    fun speak(text: String)
-}
+class SanbotService : BindBaseService(), GyroscopeListener {
 
-class SanbotService : BindBaseService(), GyroscopeListener, SanbotServiceInterface {
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    private val sanbot: Sanbot = SanbotComponent.create().sanbot
+    private lateinit var sanbot: Sanbot
     private val hardWareManager = HardWareManager(this)
     private val speechManager = SpeechManager(this)
-    private val wheelMotionManager = WheelMotionManager(this)
-
-    override fun speak(text: String) {
-        speechManager.startSpeak(text)
-    }
 
     override fun onCreate() {
         register(SanbotService::class.java)
         super.onCreate()
+        sanbot = (application as SanbotApplication).sanbot
+        serviceScope.launch {
+            sanbot.toSpeak.collect { speak(it) }
+        }
+    }
+
+    private fun speak(text: String) {
+        if (text.isNotEmpty()) {
+            speechManager.startSpeak(text)
+        }
     }
 
     override fun onMainServiceConnected() {
         hardWareManager.setOnHareWareListener(this)
-        sanbot.onConnected(this)
+        serviceScope.launch {
+            sanbot.onConnected()
+        }
     }
 
     override fun gyroscopeCheckResult(accelerometerStatus: Boolean, compassStatus: Boolean) {

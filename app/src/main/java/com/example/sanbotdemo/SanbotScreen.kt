@@ -9,19 +9,16 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.sanbotdemo.ui.theme.SanbotKotlinTheme
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 
 @Composable
 fun SanbotScreen(
@@ -80,7 +77,7 @@ fun SanbotPreview() {
 class SanbotViewModel(
     application: Application,
 ) : AndroidViewModel(application) {
-    private val sanbot: Sanbot = SanbotComponent.create().sanbot
-    val connected = sanbot.service.map { it != null }
-    fun speak(text: String) = sanbot.service.value?.speak(text)
+    private val sanbot: Sanbot = (application as SanbotApplication).sanbot
+    val connected = sanbot.connected
+    fun speak(text: String) = viewModelScope.launch { sanbot.speak(text) }
 }

@@ -2,7 +2,6 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.google.ksp)
 }
 
 android {
@@ -37,9 +36,6 @@ android {
     buildFeatures {
         compose = true
     }
-    ksp {
-        arg("me.tatarka.inject.generateCompanionExtensions", "true")
-    }
 }
 
 dependencies {
@@ -54,8 +50,6 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    ksp(libs.kotlin.inject.ksp)
-    implementation(libs.kotlin.inject.runtime)
 
     // Old libs for Sanbot library.
     implementation(libs.google.material)

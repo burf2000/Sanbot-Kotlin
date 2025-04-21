@@ -60,6 +60,7 @@ dependencies {
     // Old libs for Sanbot library.
     implementation(libs.google.material)
     implementation(libs.google.support.v4)
+    implementation(libs.google.gson)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

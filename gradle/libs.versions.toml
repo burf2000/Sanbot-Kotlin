@@ -13,6 +13,7 @@ kotlinInject = "0.7.2"
 # Old libs for Sanbot library.
 googleMaterial = "1.12.0"
 googleSupportV4 = "28.0.0"
+googleGson = "2.13.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -35,6 +36,7 @@ kotlin-inject-runtime = { group = "me.tatarka.inject", name = "kotlin-inject-run
 # Old libs for Sanbot library.
 google-material = { group = "com.google.android.material", name = "material", version.ref = "googleMaterial" }
 google-support-v4 = { group = "com.android.support", name = "support-v4", version.ref = "googleSupportV4" }
+google-gson = { group = "com.google.code.gson", name = "gson", version.ref = "googleGson" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -10,6 +10,7 @@ interface Sanbot {
     suspend fun onConnected()
     suspend fun onDisconnected()
     suspend fun speak(text: String)
+    suspend fun flickerColours()
 }
 
 class SanbotImpl : Sanbot {
@@ -31,4 +32,11 @@ class SanbotImpl : Sanbot {
         _toSpeak.emit(text)
     }
 
+    override suspend fun flickerColours() {
+        TODO("Not yet implemented")
+
+        //TODO: Dave how do I call this on the service?
+    }
+
+    //TODO: DAVE so how do we send up the gyro readins from the service
 }

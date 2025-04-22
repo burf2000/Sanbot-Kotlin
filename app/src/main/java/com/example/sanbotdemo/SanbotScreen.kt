@@ -74,10 +74,3 @@ fun SanbotPreview() {
     }
 }
 
-class SanbotViewModel(
-    application: Application,
-) : AndroidViewModel(application) {
-    private val sanbot: Sanbot = (application as SanbotApplication).sanbot
-    val connected = sanbot.connected
-    fun speak(text: String) = viewModelScope.launch { sanbot.speak(text) }
-}

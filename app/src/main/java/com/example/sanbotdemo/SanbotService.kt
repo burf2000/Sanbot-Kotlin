@@ -1,7 +1,11 @@
 package com.example.sanbotdemo
 
+import android.util.Log
 import com.sanbot.opensdk.base.BindBaseService
+import com.sanbot.opensdk.function.beans.LED
+import com.sanbot.opensdk.function.beans.headmotion.AbsoluteAngleHeadMotion
 import com.sanbot.opensdk.function.unit.HardWareManager
+import com.sanbot.opensdk.function.unit.HeadMotionManager
 import com.sanbot.opensdk.function.unit.SpeechManager
 import com.sanbot.opensdk.function.unit.interfaces.hardware.GyroscopeListener
 import kotlinx.coroutines.CoroutineScope
@@ -16,6 +20,7 @@ class SanbotService : BindBaseService(), GyroscopeListener {
     private lateinit var sanbot: Sanbot
     private val hardWareManager = HardWareManager(this)
     private val speechManager = SpeechManager(this)
+    private val headMotionManager = HeadMotionManager(this)
 
     override fun onCreate() {
         register(SanbotService::class.java)
@@ -32,6 +37,21 @@ class SanbotService : BindBaseService(), GyroscopeListener {
         }
     }
 
+    private fun flickerColours() {
+        val led = LED(
+            LED.PART_ALL,
+            LED.MODE_FLICKER_RANDOM,
+            10, // delayTime (100ms units)
+            3   // random color count
+        )
+        hardWareManager.setLED(led)
+    }
+
+    private fun moveHead() {
+        val motion = AbsoluteAngleHeadMotion(AbsoluteAngleHeadMotion.ACTION_HORIZONTAL, 90)
+        headMotionManager.doAbsoluteAngleMotion(motion)
+    }
+
     override fun onMainServiceConnected() {
         hardWareManager.setOnHareWareListener(this)
         serviceScope.launch {
@@ -39,12 +59,27 @@ class SanbotService : BindBaseService(), GyroscopeListener {
         }
     }
 
-    override fun gyroscopeCheckResult(accelerometerStatus: Boolean, compassStatus: Boolean) {
-
+    override fun gyroscopeCheckResult(
+        accelerometerStatus: Boolean,
+        compassStatus: Boolean
+    ) {
+        TODO("Not yet implemented")
     }
 
-    override fun gyroscopeData(driftAngle: Float, elevationAngle: Float, rollAngle: Float) {
-
+    override fun gyroscopeData(
+        driftAngle: Float,
+        elevationAngle: Float,
+        rollAngle: Float
+    ) {
+        TODO("Not yet implemented")
     }
+
+//    override fun gyroscopeCheckResult(accelerometerStatus: Boolean, compassStatus: Boolean) {
+//        Log.i("BURF", "BURF")
+//    }
+//
+//    override fun gyroscopeData(driftAngle: Float, elevationAngle: Float, rollAngle: Float) {
+//        Log.i("BURF", "BURF")
+//    }
 
 }

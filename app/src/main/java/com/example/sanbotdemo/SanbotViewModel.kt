@@ -5,6 +5,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 
+/**
+ * ViewModel is bound to a view.
+ * Use to pick the application state that is needed by the view
+ * and to expose actions to the view.
+ */
 class SanbotViewModel(
     application: Application,
 ) : AndroidViewModel(application) {

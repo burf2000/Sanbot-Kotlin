@@ -15,6 +15,8 @@ class SanbotViewModel(
 ) : AndroidViewModel(application) {
     private val sanbot: Sanbot = (application as SanbotApplication).sanbot
     val connected = sanbot.connected
+    val gyroscopeCheckResult = sanbot.gyroscopeCheckResult
+    val gyroscopeData = sanbot.gyroscopeData
     fun speak(text: String) = viewModelScope.launch { sanbot.speak(text) }
     fun flickerColours() = viewModelScope.launch { sanbot.flickerColours() }
 }

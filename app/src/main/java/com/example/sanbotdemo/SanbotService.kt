@@ -63,7 +63,9 @@ class SanbotService : BindBaseService(), GyroscopeListener {
         accelerometerStatus: Boolean,
         compassStatus: Boolean
     ) {
-        TODO("Not yet implemented")
+        serviceScope.launch {
+            sanbot.gyroscopeCheckResult.emit(GyroscopeCheckResult(accelerometerStatus, compassStatus))
+        }
     }
 
     override fun gyroscopeData(
@@ -71,17 +73,9 @@ class SanbotService : BindBaseService(), GyroscopeListener {
         elevationAngle: Float,
         rollAngle: Float
     ) {
-        //TODO: Dave how would we service this on the activity?
-
-        TODO("Not yet implemented")
+        serviceScope.launch {
+            sanbot.gyroscopeData.emit(GyroscopeData(driftAngle, elevationAngle, rollAngle))
+        }
     }
-
-//    override fun gyroscopeCheckResult(accelerometerStatus: Boolean, compassStatus: Boolean) {
-//        Log.i("BURF", "BURF")
-//    }
-//
-//    override fun gyroscopeData(driftAngle: Float, elevationAngle: Float, rollAngle: Float) {
-//        Log.i("BURF", "BURF")
-//    }
 
 }

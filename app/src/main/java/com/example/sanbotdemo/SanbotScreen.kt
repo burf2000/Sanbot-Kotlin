@@ -20,9 +20,18 @@ import com.example.sanbotdemo.ui.theme.SanbotKotlinTheme
 fun SanbotScreen(
     viewModel: SanbotViewModel = viewModel(),
 ) {
-    val connected by viewModel.connected.collectAsStateWithLifecycle(false)
+    // Use an outer compose method to connect to the ViewModel's state.
+    val connected by viewModel.connected.collectAsStateWithLifecycle(initialValue = false)
+    val gyroscopeCheckResult by viewModel.gyroscopeCheckResult.collectAsStateWithLifecycle(
+        initialValue = GyroscopeCheckResult(accelerometerStatus = false, compassStatus = false)
+    )
+    val gyroscopeData by viewModel.gyroscopeData.collectAsStateWithLifecycle(
+        initialValue = GyroscopeData(driftAngle = 0f, elevationAngle = 0f, rollAngle = 0f)
+    )
     SanbotView(
         connected = connected,
+        gyroscopeCheckResult = gyroscopeCheckResult,
+        gyroscopeData = gyroscopeData,
         onClick = { viewModel.speak(it) },
     )
 }
@@ -30,6 +39,8 @@ fun SanbotScreen(
 @Composable
 fun SanbotView(
     connected: Boolean,
+    gyroscopeCheckResult: GyroscopeCheckResult,
+    gyroscopeData: GyroscopeData,
     onClick: (String) -> Unit,
 ) {
     var text by remember { mutableStateOf("boo") }
@@ -44,6 +55,11 @@ fun SanbotView(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(text = "Sanbot, connected: $connected")
+                Text(text = "accelerometer: ${gyroscopeCheckResult.accelerometerStatus}")
+                Text(text = "compass: ${gyroscopeCheckResult.compassStatus}")
+                Text(text = "drift: ${gyroscopeData.driftAngle}")
+                Text(text = "elevation: ${gyroscopeData.elevationAngle}")
+                Text(text = "roll: ${gyroscopeData.rollAngle}")
                 TextField(
                     value = text,
                     onValueChange = { text = it },
@@ -65,6 +81,8 @@ fun SanbotPreview() {
     SanbotKotlinTheme {
         SanbotView(
             connected = false,
+            gyroscopeCheckResult = GyroscopeCheckResult(accelerometerStatus = false, compassStatus = false),
+            gyroscopeData = GyroscopeData(driftAngle = 0f, elevationAngle = 0f, rollAngle = 0f),
             onClick = {},
         )
     }

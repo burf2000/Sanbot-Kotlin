@@ -32,7 +32,8 @@ fun SanbotScreen(
         connected = connected,
         gyroscopeCheckResult = gyroscopeCheckResult,
         gyroscopeData = gyroscopeData,
-        onClick = { viewModel.speak(it) },
+        onSpeak = { viewModel.speak(it) },
+        onFlickerColours = { viewModel.flickerColours() },
     )
 }
 
@@ -41,7 +42,8 @@ fun SanbotView(
     connected: Boolean,
     gyroscopeCheckResult: GyroscopeCheckResult,
     gyroscopeData: GyroscopeData,
-    onClick: (String) -> Unit,
+    onSpeak: (String) -> Unit,
+    onFlickerColours: () -> Unit,
 ) {
     var text by remember { mutableStateOf("boo") }
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -65,10 +67,16 @@ fun SanbotView(
                     onValueChange = { text = it },
                 )
                 Button(
-                    onClick = { onClick(text) },
+                    onClick = { onSpeak(text) },
                     enabled = connected,
                 ) {
                     Text(text = "Speak")
+                }
+                Button(
+                    onClick = { onFlickerColours() },
+                    enabled = connected,
+                ) {
+                    Text(text = "Flicker Colours")
                 }
             }
         }
@@ -83,7 +91,8 @@ fun SanbotPreview() {
             connected = false,
             gyroscopeCheckResult = GyroscopeCheckResult(accelerometerStatus = false, compassStatus = false),
             gyroscopeData = GyroscopeData(driftAngle = 0f, elevationAngle = 0f, rollAngle = 0f),
-            onClick = {},
+            onSpeak = {},
+            onFlickerColours = {},
         )
     }
 }

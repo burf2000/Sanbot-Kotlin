@@ -1,6 +1,5 @@
 package com.example.sanbotdemo
 
-import android.util.Log
 import com.sanbot.opensdk.base.BindBaseService
 import com.sanbot.opensdk.function.beans.LED
 import com.sanbot.opensdk.function.beans.headmotion.AbsoluteAngleHeadMotion
@@ -11,6 +10,7 @@ import com.sanbot.opensdk.function.unit.interfaces.hardware.GyroscopeListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class SanbotService : BindBaseService(), GyroscopeListener {
@@ -26,9 +26,8 @@ class SanbotService : BindBaseService(), GyroscopeListener {
         register(SanbotService::class.java)
         super.onCreate()
         sanbot = (application as SanbotApplication).sanbot
-        serviceScope.launch {
-            sanbot.toSpeak.collect { speak(it) }
-        }
+        serviceScope.launch { sanbot.toSpeak.collect { speak(it) } }
+        serviceScope.launch { sanbot.flickerColours.collect { flickerColours(it) } }
     }
 
     private fun speak(text: String) {
@@ -37,14 +36,22 @@ class SanbotService : BindBaseService(), GyroscopeListener {
         }
     }
 
-    private fun flickerColours() {
-        val led = LED(
-            LED.PART_ALL,
-            LED.MODE_FLICKER_RANDOM,
-            10, // delayTime (100ms units)
-            3   // random color count
-        )
-        hardWareManager.setLED(led)
+    private fun flickerColours(flicker: Boolean) {
+        if (flicker) {
+            val led = LED(
+                LED.PART_ALL,
+                LED.MODE_FLICKER_RANDOM,
+                10, // delayTime (100ms units)
+                3   // random color count
+            )
+            hardWareManager.setLED(led)
+            // No callback from the lib, so faking it,
+            // just in case you want UI feedback.
+            serviceScope.launch {
+                delay(timeMillis = 1000)
+                sanbot.flickerColours.emit(value = false)
+            }
+        }
     }
 
     private fun moveHead() {

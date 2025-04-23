@@ -15,11 +15,11 @@ interface Sanbot {
     // (rather than having a pointless method that just does it).
     val gyroscopeCheckResult: MutableSharedFlow<GyroscopeCheckResult>
     val gyroscopeData: MutableSharedFlow<GyroscopeData>
+    val flickerColours: MutableSharedFlow<Boolean>
 
     suspend fun onConnected()
     suspend fun onDisconnected()
     suspend fun speak(text: String)
-    suspend fun flickerColours()
 }
 
 data class GyroscopeCheckResult(
@@ -47,6 +47,7 @@ class SanbotImpl : Sanbot {
 
     override val gyroscopeCheckResult = MutableSharedFlow<GyroscopeCheckResult>(replay = 1)
     override val gyroscopeData = MutableSharedFlow<GyroscopeData>(replay = 1)
+    override val flickerColours = MutableSharedFlow<Boolean>(replay = 1)
 
     override suspend fun onConnected() {
         _connected.emit(true)
@@ -59,12 +60,4 @@ class SanbotImpl : Sanbot {
     override suspend fun speak(text: String) {
         _toSpeak.emit(text)
     }
-
-    override suspend fun flickerColours() {
-        TODO("Not yet implemented")
-
-        //TODO: Dave how do I call this on the service?
-    }
-
-    //TODO: DAVE so how do we send up the gyro readins from the service
 }

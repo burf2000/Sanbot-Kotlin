@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.sanbotdemo"
-        minSdk = 24
+        minSdk = 23
         // The Sanbot SDK registers a listener but doesn't specify if it is exported or not.
         // this throws a SecurityException in 34+.
         targetSdk = 33

@@ -37,6 +37,8 @@ class SanbotService : BindBaseService(), GyroscopeListener {
     }
 
     private fun flickerColours(flicker: Boolean) {
+        moveHead()
+
         if (flicker) {
             val led = LED(
                 LED.PART_ALL,
@@ -52,10 +54,12 @@ class SanbotService : BindBaseService(), GyroscopeListener {
                 sanbot.flickerColours.emit(value = false)
             }
         }
+
+
     }
 
     private fun moveHead() {
-        val motion = AbsoluteAngleHeadMotion(AbsoluteAngleHeadMotion.ACTION_HORIZONTAL, 90)
+        val motion = AbsoluteAngleHeadMotion(AbsoluteAngleHeadMotion.ACTION_HORIZONTAL, 0)
         headMotionManager.doAbsoluteAngleMotion(motion)
     }
 

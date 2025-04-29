@@ -19,4 +19,5 @@ class SanbotViewModel(
     val gyroscopeData = sanbot.gyroscopeData
     fun speak(text: String) = viewModelScope.launch { sanbot.speak(text) }
     fun flickerColours() = viewModelScope.launch { sanbot.flickerColours.emit(value = true) }
+    fun reset() = viewModelScope.launch { sanbot.reset.emit(value = true) }
 }

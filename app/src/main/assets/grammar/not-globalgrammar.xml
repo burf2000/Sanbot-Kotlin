@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Grammars>
+    <group>
+        <command>
+            <item>Hello robot</item>     <!-- 👈 Voice command 1 -->
+            <item>Hi robot</item>         <!-- 👈 Voice command 2 -->
+        </command>
+        <type>service</type>              <!-- 👈 MUST BE 'service' because you're controlling a Service -->
+        <class>com.example.sanbotdemo.SanbotService</class> <!-- 👈 Fully qualified Service class name -->
+    </group>
+</Grammars>

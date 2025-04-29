@@ -16,10 +16,12 @@ interface Sanbot {
     val gyroscopeCheckResult: MutableSharedFlow<GyroscopeCheckResult>
     val gyroscopeData: MutableSharedFlow<GyroscopeData>
     val flickerColours: MutableSharedFlow<Boolean>
+    val reset: MutableSharedFlow<Boolean>
 
     suspend fun onConnected()
     suspend fun onDisconnected()
     suspend fun speak(text: String)
+
 }
 
 data class GyroscopeCheckResult(
@@ -48,6 +50,7 @@ class SanbotImpl : Sanbot {
     override val gyroscopeCheckResult = MutableSharedFlow<GyroscopeCheckResult>(replay = 1)
     override val gyroscopeData = MutableSharedFlow<GyroscopeData>(replay = 1)
     override val flickerColours = MutableSharedFlow<Boolean>(replay = 1)
+    override val reset = MutableSharedFlow<Boolean>(replay = 1)
 
     override suspend fun onConnected() {
         _connected.emit(true)

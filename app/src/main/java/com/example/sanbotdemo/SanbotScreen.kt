@@ -34,6 +34,7 @@ fun SanbotScreen(
         gyroscopeData = gyroscopeData,
         onSpeak = { viewModel.speak(it) },
         onFlickerColours = { viewModel.flickerColours() },
+        onReset = { viewModel.reset() },
     )
 }
 
@@ -44,6 +45,7 @@ fun SanbotView(
     gyroscopeData: GyroscopeData,
     onSpeak: (String) -> Unit,
     onFlickerColours: () -> Unit,
+    onReset: () -> Unit,
 ) {
     var text by remember { mutableStateOf("boo") }
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -57,8 +59,8 @@ fun SanbotView(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(text = "Sanbot, connected: $connected")
-                Text(text = "accelerometer: ${gyroscopeCheckResult.accelerometerStatus}")
-                Text(text = "compass: ${gyroscopeCheckResult.compassStatus}")
+//                Text(text = "accelerometer: ${gyroscopeCheckResult.accelerometerStatus}")
+//                Text(text = "compass: ${gyroscopeCheckResult.compassStatus}")
                 Text(text = "drift: ${gyroscopeData.driftAngle}")
                 Text(text = "elevation: ${gyroscopeData.elevationAngle}")
                 Text(text = "roll: ${gyroscopeData.rollAngle}")
@@ -78,6 +80,13 @@ fun SanbotView(
                 ) {
                     Text(text = "Flicker Colours")
                 }
+
+                Button(
+                    onClick = { onReset() },
+                    enabled = connected,
+                ) {
+                    Text(text = "Reset")
+                }
             }
         }
     }
@@ -93,6 +102,7 @@ fun SanbotPreview() {
             gyroscopeData = GyroscopeData(driftAngle = 0f, elevationAngle = 0f, rollAngle = 0f),
             onSpeak = {},
             onFlickerColours = {},
+            onReset = {},
         )
     }
 }

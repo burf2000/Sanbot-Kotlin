@@ -1,29 +1,30 @@
 package com.example.sanbotdemo
 
+import android.content.Context
+import android.os.PowerManager
 import android.util.Log
 import com.sanbot.opensdk.base.BindBaseService
 import com.sanbot.opensdk.beans.FuncConstant
 import com.sanbot.opensdk.function.beans.EmotionsType
 import com.sanbot.opensdk.function.beans.FaceRecognizeBean
-import com.sanbot.opensdk.function.beans.LED
-import com.sanbot.opensdk.function.beans.StreamOption
 import com.sanbot.opensdk.function.beans.headmotion.AbsoluteAngleHeadMotion
 import com.sanbot.opensdk.function.beans.speech.Grammar
 import com.sanbot.opensdk.function.beans.speech.RecognizeTextBean
-import com.sanbot.opensdk.function.beans.wheelmotion.NoAngleWheelMotion
 import com.sanbot.opensdk.function.beans.wing.AbsoluteAngleWingMotion
-import com.sanbot.opensdk.function.beans.wing.NoAngleWingMotion
-import com.sanbot.opensdk.function.beans.wing.RelativeAngleWingMotion
 import com.sanbot.opensdk.function.unit.HDCameraManager
 import com.sanbot.opensdk.function.unit.HardWareManager
 import com.sanbot.opensdk.function.unit.HeadMotionManager
+import com.sanbot.opensdk.function.unit.ModularMotionManager
 import com.sanbot.opensdk.function.unit.SpeechManager
 import com.sanbot.opensdk.function.unit.SystemManager
 import com.sanbot.opensdk.function.unit.WheelMotionManager
 import com.sanbot.opensdk.function.unit.WingMotionManager
 import com.sanbot.opensdk.function.unit.interfaces.hardware.GyroscopeListener
+import com.sanbot.opensdk.function.unit.interfaces.hardware.InfrareListener
+import com.sanbot.opensdk.function.unit.interfaces.hardware.ObstacleListener
+import com.sanbot.opensdk.function.unit.interfaces.hardware.PIRListener
+import com.sanbot.opensdk.function.unit.interfaces.hardware.TouchSensorListener
 import com.sanbot.opensdk.function.unit.interfaces.media.FaceRecognizeListener
-import com.sanbot.opensdk.function.unit.interfaces.media.MediaStreamListener
 import com.sanbot.opensdk.function.unit.interfaces.speech.RecognizeListener
 import com.sanbot.opensdk.function.unit.interfaces.speech.WakenListener
 import kotlinx.coroutines.CoroutineScope
@@ -32,21 +33,27 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-class SanbotService : BindBaseService(), GyroscopeListener, WakenListener, RecognizeListener, FaceRecognizeListener {
+
+class SanbotService : BindBaseService(),   FaceRecognizeListener {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private lateinit var sanbot: Sanbot
 
-    private lateinit var hardWareManager: HardWareManager
-    private lateinit var speechManager: SpeechManager
-    private lateinit var headMotionManager: HeadMotionManager
-    private lateinit var wheelManager: WheelMotionManager
-    private lateinit var wingMotionManager: WingMotionManager
-    private lateinit var systemManager: SystemManager
-    private lateinit var cameraManager: HDCameraManager
+    internal lateinit var hardWareManager: HardWareManager
+    internal lateinit var speechManager: SpeechManager
+    internal lateinit var headMotionManager: HeadMotionManager
+    internal lateinit var wheelManager: WheelMotionManager
+    internal lateinit var wingMotionManager: WingMotionManager
+    internal lateinit var systemManager: SystemManager
+    internal lateinit var cameraManager: HDCameraManager
+    internal lateinit var modularMotionManager : ModularMotionManager
 
-    private var TAG = "Sanbot"
+    private lateinit var wakeLock: PowerManager.WakeLock
+
+    var TAG = "Sanbot"
+
+    private var isSayingHello = false
 
     override fun onCreate() {
         register(SanbotService::class.java)
@@ -57,15 +64,26 @@ class SanbotService : BindBaseService(), GyroscopeListener, WakenListener, Recog
         //TODO: Need to understand what this does
         serviceScope.launch { sanbot.toSpeak.collect { speak(it) } }
         serviceScope.launch { sanbot.flickerColours.collect { flickerColours(it) } }
+        serviceScope.launch { sanbot.reset.collect { reset(it) } }
+
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        wakeLock = powerManager.newWakeLock(
+            PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ON_AFTER_RELEASE,
+            "SanbotService::ScreenWakeLock"
+        )
+        wakeLock.acquire()
     }
 
     override fun onDestroy() {
         super.onDestroy()
 
-        //TODO: finish
         hardWareManager.setOnHareWareListener(null)
         speechManager.setOnSpeechListener(null)
-        cameraManager.setMediaListener(this)
+
+
+        if (::wakeLock.isInitialized && wakeLock.isHeld) {
+            wakeLock.release()
+        }
     }
 
     override fun onMainServiceConnected() {
@@ -77,23 +95,146 @@ class SanbotService : BindBaseService(), GyroscopeListener, WakenListener, Recog
         wingMotionManager = getUnitManager(FuncConstant.WINGMOTION_MANAGER) as WingMotionManager
         systemManager = getUnitManager(FuncConstant.SYSTEM_MANAGER) as SystemManager
         cameraManager = getUnitManager(FuncConstant.HDCAMERA_MANAGER) as HDCameraManager
+        modularMotionManager = getUnitManager(FuncConstant.MODULARMOTION_MANAGER) as ModularMotionManager
 
-        hardWareManager.setOnHareWareListener(this)
-        speechManager.setOnSpeechListener(this)
+        setupGyro()
+        setupListen()
+        setupTouch()
+
         cameraManager.setMediaListener(this)
+        speak("Loaded")
 
         serviceScope.launch {
             sanbot.onConnected()
         }
 
-        speechManager.doWakeUp()
+        reset(true)
+        moveHeadUp(60)
+    }
 
-//        moveWings()
-//        facial()
-//        listen()
-//        readGrammer()
+    private fun setupTouch() {
 
+        hardWareManager.setOnHareWareListener(object : TouchSensorListener {
+            override fun onTouch(part: Int) {
+                Log.i(TAG ,"touched $part")
+                //speechManager.startSpeak("Hello")
 
+                serviceScope.launch(Dispatchers.Main) {
+                    speechManager.doWakeUp()
+                }
+            }
+
+            override fun onTouch(part: Int, isTouch: Boolean) {
+                Log.i(TAG ,"touched $part: $isTouch")
+            }
+        })
+
+        hardWareManager.setOnHareWareListener(object : InfrareListener {
+            override fun infrareDistance(part: Int, distance: Int) {
+                //Log.i(TAG, "Infrared Object detected close at sensor $part: $distance cm")
+            }
+        })
+
+        hardWareManager.setOnHareWareListener(object : PIRListener {
+            override fun onPIRCheckResult(isChecked: Boolean, part: Int) {
+                //Log.i(TAG, "PIR Motion detected by sensor $part $isChecked")
+            }
+        })
+
+        hardWareManager.setOnHareWareListener(object : ObstacleListener {
+            override fun onObstacleStatus(status: Boolean) {
+                Log.i(TAG, "Obstacle $status")
+            }
+        })
+    }
+
+    private fun setupGyro() {
+        hardWareManager.setOnHareWareListener(object : GyroscopeListener {
+            override fun gyroscopeCheckResult(
+                accelerometerStatus: Boolean,
+                compassStatus: Boolean
+            ) {
+                serviceScope.launch {
+                    Log.i(TAG, " Gyroscope Acc: $accelerometerStatus, Compass: $compassStatus")
+
+                    sanbot.gyroscopeCheckResult.emit(GyroscopeCheckResult(accelerometerStatus, compassStatus))
+                }
+            }
+
+            override fun gyroscopeData(driftAngle: Float, elevationAngle: Float, rollAngle: Float) {
+                serviceScope.launch {
+                    Log.i(TAG, " Gyroscope Drift: $driftAngle, Elevation: $elevationAngle, Roll: $rollAngle")
+                    sanbot.gyroscopeData.emit(GyroscopeData(driftAngle, elevationAngle, rollAngle))
+                }
+            }
+        })
+    }
+
+    private fun setupListen() {
+
+            //Set wakeup, sleep callback
+        speechManager.setOnSpeechListener(object : WakenListener {
+                override fun onWakeUpStatus(b: Boolean) {
+                    Log.i(TAG, "Listen wake status $b")
+                }
+
+                override fun onWakeUp() {
+                    Log.i(TAG, "Listen wake")
+                }
+
+                override fun onSleep() {
+                    Log.i(TAG, "Listen wake sleep")
+
+                    serviceScope.launch(Dispatchers.Main) {
+                        delay(1000)
+                        speechManager.doWakeUp()
+                    }
+                }
+            })
+
+        speechManager.setOnSpeechListener(object : RecognizeListener {
+            override fun onError(engine: Int, errorCode: Int) {
+
+                Log.i(TAG, "Listen Error $Int")
+            }
+
+            override fun onRecognizeResult(grammar: Grammar): Boolean {
+                val heard = grammar.text
+                Log.i(TAG, "Listen Heard $heard")
+
+                //speechManager.startSpeak("I heard $heard")
+//                when {
+//                    heard?.contains("hello", ignoreCase = true) ?:  -> {
+//                        speechManager.startSpeak("Hello, human!")
+//                    }
+//                    heard?.contains("go forward", ignoreCase = true) ?:  -> {
+//                        // Move robot forward (using WheelMotionManager)
+//                    }
+//                }
+
+                // true = Sanbot won’t handle it further (you take over)
+
+                return true
+            }
+
+            override fun onRecognizeText(recognizeText: RecognizeTextBean) {
+                Log.i(TAG, "Listen Heard2 ${recognizeText.text}")
+            }
+
+            override fun onRecognizeVolume(volume: Int) {
+
+                //Log.i(TAG, "Listen Volume $volume")
+            }
+
+            override fun onStartRecognize() {
+                Log.i(TAG, "Listen started")
+            }
+
+            override fun onStopRecognize() {
+                Log.i(TAG, "Listen stopped")
+            }
+
+        })
     }
 
     private fun speak(text: String) {
@@ -102,291 +243,118 @@ class SanbotService : BindBaseService(), GyroscopeListener, WakenListener, Recog
             Log.i(TAG, "Said $text")
         }
     }
+    
+    private fun moveHeadUp(up : Int) {
+        val lookUpMotion = AbsoluteAngleHeadMotion(
+            AbsoluteAngleHeadMotion.ACTION_VERTICAL,  // 👈 Vertical action
+            up  // Degrees (0 = center, positive = up)
+        )
+        headMotionManager.doAbsoluteAngleMotion(lookUpMotion)
+    }
 
     private fun flickerColours(flicker: Boolean) {
-        moveHead()
+        //speechManager.doWakeUp()
 
-        if (flicker) {
-            val led = LED(
-                LED.PART_ALL,
-                LED.MODE_FLICKER_RANDOM,
-                10, // delayTime (100ms units)
-                3   // random color count
-            )
-
-            hardWareManager.setLED(led)
-            // No callback from the lib, so faking it,
-            // just in case you want UI feedback.
-            serviceScope.launch {
-                delay(timeMillis = 1000)
-                sanbot.flickerColours.emit(value = false)
-            }
+        serviceScope.launch(Dispatchers.Main) {
+            delay(1000)
+            speechManager.doWakeUp()
         }
 
-
-    }
-
-    private fun readGrammer() {
-        val inputStream = assets.open("grammar/globalgrammar.xml")
-        val text = inputStream.bufferedReader().use { it.readText() }
-
-        Log.i(TAG, "Grammer $text")
-    }
-
-//    private fun listen() {
-//        speechManager.doWakeUp()
-//        speechManager.setOnSpeechListener(object : RecognizeListener {
-//            override fun onError(engine: Int, errorCode: Int) {
+//        if (flicker) {
+//            val led = LED(
+//                LED.PART_ALL,
+//                LED.MODE_FLICKER_RANDOM,
+//                10, // delayTime (100ms units)
+//                3   // random color count
+//            )
 //
-//                Log.i(TAG, "Listen Error $Int")
+//            hardWareManager.setLED(led)
+//            // No callback from the lib, so faking it,
+//            // just in case you want UI feedback.
+//            serviceScope.launch {
+//                delay(timeMillis = 1000)
+//                sanbot.flickerColours.emit(value = false)
 //            }
-//
-//            override fun onRecognizeResult(grammar: Grammar): Boolean {
-//                val heard = grammar.text
-//                Log.i(TAG, "Listen Heard $heard")
-////                when {
-////                    heard?.contains("hello", ignoreCase = true) ?:  -> {
-////                        speechManager.startSpeak("Hello, human!")
-////                    }
-////                    heard?.contains("go forward", ignoreCase = true) ?:  -> {
-////                        // Move robot forward (using WheelMotionManager)
-////                    }
-////                }
-//
-//                // true = Sanbot won’t handle it further (you take over)
-//                return true
-//            }
-//
-//            override fun onRecognizeText(recognizeText: RecognizeTextBean) {
-//                Log.i(TAG, "Listen Heard2 ${recognizeText.text}")
-//            }
-//
-//            override fun onRecognizeVolume(volume: Int) {
-//
-//                Log.i(TAG, "Listen Volume $volume")
-//            }
-//
-//            override fun onStartRecognize() {
-//                Log.i(TAG, "Listen started")
-//            }
-//
-//            override fun onStopRecognize() {
-//                Log.i(TAG, "Listen stopped")
-//            }
-//
-//        })
-//    }
-
-    private fun handleVision() {
-        cameraManager.setMediaListener(object : MediaStreamListener {
-
-            override fun getAudioStream(handle: Int, data: ByteArray) {
-
-                Log.i(TAG, "audio stream")
-            }
-
-            override fun getVideoStream(
-                handle: Int,
-                data: ByteArray,
-                width: Int,
-                height: Int
-            ) {
-                Log.i(TAG, "video stream")
-            }
-        })
-
-        val streamOption = StreamOption().apply {
-            channel = StreamOption.MAIN_STREAM               // 1280x720 resolution
-            decodType = StreamOption.HARDWARE_DECODE    // Hardware decoding
-            isJustIframe = false                             // Include all frames
-        }
-
-        val result = cameraManager.openStream(streamOption)
-        val streamHandle = result.result?.toIntOrNull() ?: -1
-
-        //Face Detect
-        cameraManager.setMediaListener(object : FaceRecognizeListener {
-            override fun recognizeResult(faceRecognizeBean: List<FaceRecognizeBean>) {
-                faceRecognizeBean.forEach {
-                    Log.i(TAG, " face Detected: ${it.user} (${it.gender})")
-                }
-            }
-        })
-
-        //BIT MAP
-        val bitmap = cameraManager.videoImage
-        if (bitmap != null) {
-            // Display or save the image
-        }
-
-        //TO CLOSE
-//        if (streamHandle != -1) {
-//            cameraManager.closeStream(streamHandle)
 //        }
 
-//        You can only open 2 streams at once.
-//        •	Streams are in raw format (YUV or H.264) — you may need a decoder like FFmpeg or MediaCodec.
-//        •	Audio stream has no echo cancellation, so avoid local playback while recording.
+
     }
 
-    private fun moveWings() {
-//        Parameter
-//        Description
-//        PART_LEFT / PART_RIGHT / PART_BOTH
-//        Which arm to move
-//                ACTION_UP, ACTION_DOWN, ACTION_STOP, ACTION_RESET
-//        Predefined motions
-//                Speed
-//        1 (slowest) to 10 (fastest)
-//        Angle
-//        In degrees (relative or absolute), up to 270
+    fun reset(noNeeded: Boolean) {
+        serviceScope.launch {
 
-        //Move Arms Up/Down (No Angle Motion)
-        val motion = NoAngleWingMotion(
-            NoAngleWingMotion.PART_BOTH,   // left, right, or both arms
-            5,                              // speed (1–10)
-            NoAngleWingMotion.ACTION_UP     // or ACTION_DOWN / ACTION_RESET / ACTION_STOP
-        )
-        wingMotionManager.doNoAngleMotion(motion)
+            // reset arms
+            val motion = AbsoluteAngleWingMotion(
+                AbsoluteAngleWingMotion.PART_BOTH,
+                5,
+                180
+            )
+            wingMotionManager.doAbsoluteAngleMotion(motion)
 
-        //  Move Arms by Relative Angle
-        val motion1 = RelativeAngleWingMotion(
-            RelativeAngleWingMotion.PART_BOTH,
-            5,                             // speed (1–8)
-            RelativeAngleWingMotion.ACTION_UP,
-            45                             // degrees (0–270)
-        )
-        wingMotionManager.doRelativeAngleMotion(motion1)
+            // Reset head
+            val horizontalMotion = AbsoluteAngleHeadMotion(
+                AbsoluteAngleHeadMotion.ACTION_HORIZONTAL,
+                90
+            )
+            headMotionManager.doAbsoluteAngleMotion(horizontalMotion)
 
-        // Move Arms to an Absolute Angle
-        val motion2 = AbsoluteAngleWingMotion(
-            AbsoluteAngleWingMotion.PART_BOTH,
-            5,      // speed (1–8)
-            90      // absolute angle (0–270, counterclockwise)
-        )
-        wingMotionManager.doAbsoluteAngleMotion(motion2)
+            delay(1000) // ⏳ Wait 1 second
+        }
     }
 
-    private fun facial() {
-        //val systemManager = getUnitManager(FuncConstant.SYSTEM_MANAGER) as SystemManager
+    fun waveHello() {
+
+        if (isSayingHello) return
+        isSayingHello = true
+
+        // Smile!
         systemManager.showEmotion(EmotionsType.SMILE)
 
-//        Smile
-//        EmotionsType.SMILE
-//        Angry
-//        EmotionsType.ANGRY
-//        Cry
-//        EmotionsType.CRY
-//        Surprise
-//        EmotionsType.SURPRISE
-//        Kiss
-//        EmotionsType.KISS
-//        Laugh
-//        EmotionsType.LAUGHTER
-//        Shy
-//        EmotionsType.SHY
-//        Thumbs up
-//                EmotionsType.PRISE
-//        Snicker
-//        EmotionsType.SNICKER
-//        Faint
-//        EmotionsType.FAINT
-//        Questioning
-//        EmotionsType.QUESTION
-//        Sleep
-//        EmotionsType.SLEEP
-//        Goodbye
-//        EmotionsType.GOODBYE
-//        Arrogant
-//        EmotionsType.ARROGANCE
-//        Default/Normal
-//        EmotionsType.NORMAL
+        // Say Hello
+        speechManager.startSpeak("Hello, nice to meet you!")
 
-    }
-
-    private fun move() {
-        //val wheelManager = getUnitManager(FuncConstant.WHEELMOTION_MANAGER) as WheelMotionManager
-        val motion = NoAngleWheelMotion(NoAngleWheelMotion.ACTION_FORWARD, 5, 3000)
-        wheelManager.doNoAngleMotion(motion)
-    }
-
-    private fun moveHead() {
-        val motion = AbsoluteAngleHeadMotion(AbsoluteAngleHeadMotion.ACTION_HORIZONTAL, 0)
-        headMotionManager.doAbsoluteAngleMotion(motion)
-    }
-
-
-
-
-    // Delegate methods
-    override fun gyroscopeCheckResult(
-        accelerometerStatus: Boolean,
-        compassStatus: Boolean
-    ) {
+        // Coroutine for timing the arm wave
         serviceScope.launch {
-            Log.i(TAG, " Gyroscope Acc: $accelerometerStatus, Compass: $compassStatus")
+            repeat(4) {  // Wave 3 times
+                // Arm UP
+                val upMotion = AbsoluteAngleWingMotion(
+                    AbsoluteAngleWingMotion.PART_RIGHT,
+                    5,
+                    45
+                )
+                wingMotionManager.doAbsoluteAngleMotion(upMotion)
+                delay(1000)  // Wait 0.6 seconds
 
-            sanbot.gyroscopeCheckResult.emit(GyroscopeCheckResult(accelerometerStatus, compassStatus))
+                // Arm DOWN
+                val downMotion = AbsoluteAngleWingMotion(
+                    AbsoluteAngleWingMotion.PART_RIGHT,
+                    5,
+                    90
+                )
+                wingMotionManager.doAbsoluteAngleMotion(downMotion)
+                delay(1000)  // Wait 0.6 seconds
+            }
+
+            // Reset arm to neutral after waving
+            val downMotion = AbsoluteAngleWingMotion(
+                AbsoluteAngleWingMotion.PART_RIGHT,
+                5,
+                180
+            )
+            wingMotionManager.doAbsoluteAngleMotion(downMotion)
+
+            delay(3000)
+            isSayingHello = false
+
         }
-    }
-
-    override fun gyroscopeData(
-        driftAngle: Float,
-        elevationAngle: Float,
-        rollAngle: Float
-    ) {
-        serviceScope.launch {
-            Log.i(TAG, " Gyroscope Drift: $driftAngle, Elevation: $elevationAngle, Roll: $rollAngle")
-            sanbot.gyroscopeData.emit(GyroscopeData(driftAngle, elevationAngle, rollAngle))
-        }
-    }
-
-    override fun onSleep() {
-
-        Log.i(TAG, "Listen sleep")
-    }
-
-    override fun onWakeUp() {
-        Log.i(TAG, "Listen wake up")
-    }
-
-    override fun onWakeUpStatus(isWakeUpByVoice: Boolean) {
-        Log.i(TAG, "Listen wake status  $isWakeUpByVoice")
-    }
-
-    override fun onError(engine: Int, errorCode: Int) {
-        Log.i(TAG, "Listen onError  $errorCode")
-    }
-
-    override fun onRecognizeResult(grammar: Grammar): Boolean {
-        val heard = grammar.text
-        Log.d("Listen", "Heard: $heard")
-
-        return true
-    }
-
-    override fun onRecognizeText(recognizeText: RecognizeTextBean) {
-        Log.i(TAG, "Listen Heard2: ${recognizeText.text}")
-    }
-
-    override fun onRecognizeVolume(volume: Int) {
-        Log.i(TAG, "Listen volume: $volume")
-
-    }
-
-    override fun onStartRecognize() {
-        Log.i(TAG, "Listen start")
-    }
-
-    override fun onStopRecognize() {
-        Log.i(TAG, "Listen stop")
     }
 
     override fun recognizeResult(faceRecognizeBean: List<FaceRecognizeBean>) {
 
         faceRecognizeBean.forEach {
             Log.i(TAG, " face Detected: ${it.user} (${it.gender})")
+
+            waveHello()
         }
     }
-
 }

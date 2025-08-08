@@ -1,18 +1,74 @@
-
+<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.sanbotdemo">
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
+
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
     <application
+        android:name=".SanbotApplication"
         android:allowBackup="true"
-        android:label="SanbotDemo"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.Light.NoActionBar">
-        <activity android:name=".MainActivity"
-            android:exported="true">
+        android:theme="@style/Theme.SanbotKotlin"
+        tools:targetApi="31">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:hardwareAccelerated="true"
+            android:theme="@style/Theme.SanbotKotlin">
+
+            <!-- Correct meta-data (no extra spaces) -->
+            <meta-data android:name="RECOGNIZE_MODE" android:value="1" />
+<!--            <meta-data android:name="SPEECH_MODE" android:value="1"/>-->
+<!--            <meta-data android:name="FORBID_TOUCH" android:value="true"/>-->
+<!--            <meta-data android:name="FORBID_PIR" android:value="true"/>-->
+<!--            <meta-data android:name="FORBID_WAKE_RESPONSE" android:value="true"/>-->
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+
         </activity>
+
+        <meta-data
+            android:name="FORBID_TOUCH"
+            android:value="true" />
+        <meta-data
+            android:name="FORBID_WAKE_RESPONSE"
+            android:value="true" />
+        <meta-data
+            android:name="RECOGNIZE_MODE"
+            android:value="1" />
+
+
+        <provider
+            android:authorities="com.example.sanbotdemo.grammar"
+            android:name="com.sanbot.opensdk.utils.GrammarProvider"
+            android:exported="true" />
+
+        <service android:name=".SanbotService" android:exported="true" >
+            <meta-data android:name="RECOGNIZE_MODE" android:value="1" />
+<!--            <meta-data android:name="SPEECH_MODE" android:value="1"/>-->
+            <meta-data android:name="FORBID_TOUCH" android:value="true"/>
+            <meta-data android:name="FORBID_PIR" android:value="true"/>
+            <meta-data android:name="FORBID_WAKE_RESPONSE" android:value="true"/>
+        </service>
+
     </application>
+
 </manifest>
